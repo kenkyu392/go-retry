@@ -27,7 +27,6 @@ func TestDo(t *testing.T) {
 	)
 	for _, err := range errs {
 		t.Logf("%#v", err)
-		fmt.Println(err)
 	}
 	if len(errs) != 6 {
 		t.Fatal("5 errors need to occur")
@@ -50,7 +49,6 @@ func TestDoWithContext(t *testing.T) {
 		)
 		for _, err := range errs {
 			t.Logf("%#v", err)
-			fmt.Println(err)
 		}
 		if len(errs) != 1 {
 			t.Fatal("1 error need to occur")
@@ -72,7 +70,6 @@ func TestDoWithContext(t *testing.T) {
 		)
 		for _, err := range errs {
 			t.Logf("%#v", err)
-			fmt.Println(err)
 		}
 		if len(errs) != 2 {
 			t.Fatal("2 errors need to occur")
