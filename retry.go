@@ -2,7 +2,15 @@ package retry
 
 import (
 	"context"
+	"errors"
 	"time"
+)
+
+var (
+	// Canceled is used to cancel a retry.
+	Canceled = errors.New("canceled")
+	// Skipped is used to skip a function.
+	Skipped = errors.New("skipped")
 )
 
 // Do wraps DoWithContext using the background context.
@@ -17,13 +25,21 @@ func DoWithContext(ctx context.Context, delay time.Duration, fns ...func(context
 	var errs = make([]error, 0)
 	for i := 0; i < len(fns); {
 		if err := fns[i](ctx); err != nil {
-			errs = append(errs, err)
-			select {
-			case <-ctx.Done():
-				errs = append(errs, ctx.Err())
+			switch {
+			default:
+				errs = append(errs, err)
+				select {
+				case <-ctx.Done():
+					errs = append(errs, ctx.Err())
+					return errs
+				case <-time.After(delay):
+					continue
+				}
+			case errors.Is(err, Canceled):
+				// If Canceled is received, the function will exit.
 				return errs
-			case <-time.After(delay):
-				continue
+			case errors.Is(err, Skipped):
+				// If Skipped is received, proceed to the next function.
 			}
 		}
 		select {
