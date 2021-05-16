@@ -35,7 +35,8 @@ func main() {
 	errs := retry.DoWithContext(ctx, time.Second,
 		// Execute the first step...
 		func(ctx context.Context) error {
-			// You can use Skipped or Canceled in a function to skip the current function or cancel all remaining functions.
+			// You can use Skipped or Canceled in a function to skip the current
+			// function or cancel all remaining functions.
 			return nil
 		},
 		// Execute the second step...
