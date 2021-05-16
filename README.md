@@ -30,15 +30,16 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	// Or use Do(time.Second...
-	// Retry the function that encountered the error, not all functions.
+	// Or you can use Do(time.Second...) to specify the delay before retrying.
+	// Retry only the function in error, not all functions.
 	errs := retry.DoWithContext(ctx, time.Second,
+		// Execute the first step...
 		func(ctx context.Context) error {
-			// Execute the first step...
+			// You can use Skipped or Canceled in a function to skip the current function or cancel all remaining functions.
 			return nil
 		},
+		// Execute the second step...
 		func(ctx context.Context) error {
-			// Execute the second step...
 			return nil
 		},
 	)
