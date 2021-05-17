@@ -22,7 +22,6 @@ package main
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/kenkyu392/go-retry"
 )
@@ -30,9 +29,11 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	// Or you can use Do(time.Second...) to specify the delay before retrying.
+	// Or you can use Do(retry.Duration(time.Second)...) to specify the delay before retrying.
 	// Retry only the function in error, not all functions.
-	errs := retry.DoWithContext(ctx, time.Second,
+	errs := retry.DoWithContext(ctx,
+		// Use exponential backoff for the delay time specification function.
+		retry.ExponentialBackoff(),
 		// Execute the first step...
 		func(ctx context.Context) error {
 			// You can use Skipped or Canceled in a function to skip the current
