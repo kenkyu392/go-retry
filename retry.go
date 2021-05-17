@@ -3,6 +3,7 @@ package retry
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 )
 
@@ -13,26 +14,45 @@ var (
 	Skipped = errors.New("skipped")
 )
 
+// DurationFunc ...
+type DurationFunc func(retries int) time.Duration
+
+// Duration creates a DurationFunc that returns a Duration.
+func Duration(d time.Duration) DurationFunc {
+	return func(retries int) time.Duration {
+		return d
+	}
+}
+
+// ExponentialBackoff creates and returns a DurationFunc that exponentially
+// backoff the retry interval.
+func ExponentialBackoff() DurationFunc {
+	return func(retries int) time.Duration {
+		return time.Duration(math.Pow(2, float64(retries))*100) * time.Millisecond
+	}
+}
+
 // Do wraps DoWithContext using the background context.
-func Do(delay time.Duration, fns ...func(context.Context) error) []error {
-	return DoWithContext(context.Background(), delay, fns...)
+func Do(delayFn DurationFunc, fns ...func(context.Context) error) []error {
+	return DoWithContext(context.Background(), delayFn, fns...)
 }
 
 // DoWithContext executes the given functions in order.
 // If the function returns an error, the function will be executed again after
 // the time specified by delay.
-func DoWithContext(ctx context.Context, delay time.Duration, fns ...func(context.Context) error) []error {
+func DoWithContext(ctx context.Context, delayFn DurationFunc, fns ...func(context.Context) error) []error {
 	var errs = make([]error, 0)
-	for i := 0; i < len(fns); {
+	for i, retries := 0, 0; i < len(fns); {
 		if err := fns[i](ctx); err != nil {
 			switch {
 			default:
 				errs = append(errs, err)
+				retries++
 				select {
 				case <-ctx.Done():
 					errs = append(errs, ctx.Err())
 					return errs
-				case <-time.After(delay):
+				case <-time.After(delayFn(retries)):
 					continue
 				}
 			case errors.Is(err, Canceled):
@@ -47,6 +67,7 @@ func DoWithContext(ctx context.Context, delay time.Duration, fns ...func(context
 			errs = append(errs, ctx.Err())
 			return errs
 		default:
+			retries = 0
 			i++
 		}
 	}
