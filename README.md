@@ -32,8 +32,9 @@ func main() {
 	// Or you can use Do(retry.Duration(time.Second)...) to specify the delay before retrying.
 	// Retry only the function in error, not all functions.
 	errs := retry.DoWithContext(ctx,
-		// Use exponential backoff for the delay time specification function.
-		retry.ExponentialBackoff(),
+		// Use exponential backoff with a maximum of 5 retries for the
+		// delay time specification function.
+		retry.ExponentialBackoff(5),
 		// Execute the first step...
 		func(ctx context.Context) error {
 			// You can use Skipped or Canceled in a function to skip the current
