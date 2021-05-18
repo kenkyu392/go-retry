@@ -26,8 +26,12 @@ func Duration(d time.Duration) DurationFunc {
 
 // ExponentialBackoff creates and returns a DurationFunc that exponentially
 // backoff the retry interval.
-func ExponentialBackoff() DurationFunc {
+// If maxRetries is negative, retry without limit.
+func ExponentialBackoff(maxRetries int) DurationFunc {
 	return func(retries int) time.Duration {
+		if maxRetries >= 0 && maxRetries < retries {
+			return -1
+		}
 		return time.Duration(math.Pow(2, float64(retries))*100) * time.Millisecond
 	}
 }
@@ -40,6 +44,7 @@ func Do(delayFn DurationFunc, fns ...func(context.Context) error) []error {
 // DoWithContext executes the given functions in order.
 // If the function returns an error, the function will be executed again after
 // the time specified by delay.
+// If the result of delayFn is negative, execute the next function without retrying.
 func DoWithContext(ctx context.Context, delayFn DurationFunc, fns ...func(context.Context) error) []error {
 	var errs = make([]error, 0)
 	for i, retries := 0, 0; i < len(fns); {
@@ -48,12 +53,14 @@ func DoWithContext(ctx context.Context, delayFn DurationFunc, fns ...func(contex
 			default:
 				errs = append(errs, err)
 				retries++
-				select {
-				case <-ctx.Done():
-					errs = append(errs, ctx.Err())
-					return errs
-				case <-time.After(delayFn(retries)):
-					continue
+				if delay := delayFn(retries); delay >= 0 {
+					select {
+					case <-ctx.Done():
+						errs = append(errs, ctx.Err())
+						return errs
+					case <-time.After(delayFn(retries)):
+						continue
+					}
 				}
 			case errors.Is(err, Canceled):
 				// If Canceled is received, the function will exit.
