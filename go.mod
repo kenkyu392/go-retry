@@ -1,3 +1,3 @@
 module github.com/kenkyu392/go-retry
 
-go 1.16
+go 1.17
