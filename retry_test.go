@@ -108,47 +108,47 @@ func TestErr(t *testing.T) {
 }
 
 func TestExponentialBackoff(t *testing.T) {
+	// 2ms + 4ms + 8ms + 1.6s = min:3.0s max:3.4s
+	const (
+		maxRetries = 4
+		bufferTime = time.Millisecond * 100
+		minTime    = time.Second * 3
+		maxTime    = minTime + (time.Millisecond * 400) + bufferTime
+	)
+
 	t.Run("case=limited", func(t *testing.T) {
-		const maxRetries = 3
 		start := time.Now()
-		times := make([]time.Duration, 0)
 		errs := Do(ExponentialBackoff(maxRetries),
 			func(ctx context.Context) error {
-				times = append(times, time.Since(start))
 				return errors.New("retry")
 			},
 		)
+		since := time.Since(start)
 		if got := len(errs); got != maxRetries+1 {
 			t.Fatalf("got: %v, want: %d", got, maxRetries+1)
 		}
-		for i := 0; i < len(times); i++ {
-			if i+1 < len(times) && times[i]*2 > times[i+1] {
-				t.Fatal("delay is too small")
-			}
+		if since < minTime || since > maxTime {
+			t.Fatalf("delay is too short or too long (%v)", since)
 		}
 	})
 
 	t.Run("case=infinity", func(t *testing.T) {
 		var retries = 0
 		start := time.Now()
-		times := make([]time.Duration, 0)
 		errs := Do(ExponentialBackoff(-1),
 			func(ctx context.Context) error {
-				retries++
-				times = append(times, time.Since(start))
-				if retries > 3 {
+				if retries++; retries > maxRetries {
 					return nil
 				}
 				return errors.New("retry")
 			},
 		)
-		if got := len(errs); got != 3 {
-			t.Fatalf("got: %v, want: %d", got, 3)
+		since := time.Since(start)
+		if got := len(errs); got != maxRetries {
+			t.Fatalf("got: %v, want: %d", got, maxRetries)
 		}
-		for i := 0; i < len(times); i++ {
-			if i+1 < len(times) && times[i]*2 > times[i+1] {
-				t.Fatal("delay is too small")
-			}
+		if since < minTime || since > maxTime {
+			t.Fatalf("delay is too short or too long (%v)", since)
 		}
 	})
 }

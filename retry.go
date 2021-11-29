@@ -4,8 +4,13 @@ import (
 	"context"
 	"errors"
 	"math"
+	"math/rand"
 	"time"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 var (
 	// Canceled is used to cancel a retry.
@@ -32,7 +37,8 @@ func ExponentialBackoff(maxRetries int) DurationFunc {
 		if maxRetries >= 0 && maxRetries < retries {
 			return -1
 		}
-		return time.Duration(math.Pow(2, float64(retries))*100) * time.Millisecond
+		random := time.Duration(rand.Intn(80)+20) * time.Millisecond
+		return time.Duration(math.Pow(2, float64(retries))*100)*time.Millisecond + random
 	}
 }
 
